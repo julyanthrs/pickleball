@@ -1,0 +1,12 @@
+{
+  "name": "pickleball-open-play",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["pickleball-studio"],
+  "scripts": {
+    "dev": "node pickleball-studio/server.mjs --dev --open",
+    "start": "node pickleball-studio/server.mjs",
+    "test": "npm run test --workspace pickleball-studio",
+    "check": "npm run check --workspace pickleball-studio"
+  }
+}
