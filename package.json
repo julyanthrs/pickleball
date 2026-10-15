@@ -2,7 +2,10 @@
   "name": "pickleball-open-play",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["pickleball-studio"],
+  "workspaces": [
+    "pickleball-studio",
+    "pickleball-player-portal"
+  ],
   "scripts": {
     "dev": "node pickleball-studio/server.mjs --dev --open",
     "start": "node pickleball-studio/server.mjs",
