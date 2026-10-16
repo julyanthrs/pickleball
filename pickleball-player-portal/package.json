@@ -1,0 +1,12 @@
+{
+  "name": "pickleball-player-portal",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate-artifact.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

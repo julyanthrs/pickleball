@@ -1,0 +1,8 @@
+node_modules/
+.sites/
+*.zip
+qa/
+dist/server/
+dist/.openai/
+dist/qr.js
+.env*
