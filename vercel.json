@@ -3,5 +3,8 @@
   "framework": null,
   "installCommand": "npm ci",
   "buildCommand": "npm run build",
-  "outputDirectory": "pickleball-studio/dist"
+  "outputDirectory": "pickleball-studio/dist",
+  "rewrites": [
+    { "source": "/api/portal/:portalPath*", "destination": "/api/live?portalPath=:portalPath*" }
+  ]
 }

@@ -6,9 +6,9 @@ The application and player service source files must be ordinary tracked files i
 
 ## Live player sharing
 
-This Vercel deployment serves the organizer frontend and browser-local saved sessions. The existing shared player service remains on its Cloudflare Worker and D1 database. The original organizer proxy also depends on authenticated identity supplied by its private host; Vercel does not provide that identity header.
+The Vercel function at /api/live receives /api/portal requests through a rewrite and forwards them to the public player service. Organizers have a cryptographically random, session-specific bearer token, generated in their browser and saved with the session. The backend stores its hash in D1 and verifies ownership for every read, edit and join approval. Players never receive organizer tokens. Creation is rate limited. No service-wide key or extra Vercel environment variable is needed.
 
-For cross-device QR joining, use the existing private organizer at https://pickleball-studio-green.julyanthrs.chatgpt.site/. Its Invite Players action creates public session-specific player links. A future Vercel backend integration needs organizer authentication and a server-only connection to the player service. Never put the portal API key in browser JavaScript or expose an unauthenticated organizer proxy.
+The existing private organizer continues using its original authenticated proxy. The public scoped API cannot claim those sessions or another organizer’s sessions. Organizer session exports contain the access token and should be treated as private recovery files. Browser storage clearing loses organizer access unless an export is retained.
 
 ## Local verification
 

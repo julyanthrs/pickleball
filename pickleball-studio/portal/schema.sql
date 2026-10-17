@@ -12,3 +12,4 @@ CREATE TABLE identities (
 CREATE INDEX identities_room ON identities(room_id);
 CREATE TABLE changes (room_id TEXT NOT NULL REFERENCES rooms(id), version INTEGER NOT NULL, source TEXT NOT NULL, PRIMARY KEY(room_id,version));
 CREATE TABLE rate_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE room_organizers (room_id TEXT PRIMARY KEY REFERENCES rooms(id), token_hash TEXT NOT NULL UNIQUE);

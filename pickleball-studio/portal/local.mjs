@@ -4,7 +4,7 @@ import { portalApi } from './backend.js';
 import { fileURLToPath } from 'node:url';
 let db;
 const localKey=crypto.randomUUID()+crypto.randomUUID();
-export async function initializeLocalPortal(){if(db)return;await fs.mkdir(new URL('../.sites/',import.meta.url),{recursive:true});db=sqliteD1(fileURLToPath(new URL('../.sites/player-portal.sqlite',import.meta.url)));const version=db.prepare('PRAGMA user_version');if((await version.first()).user_version===0){db.exec(await fs.readFile(new URL('./schema.sql',import.meta.url),'utf8'));db.exec('PRAGMA user_version=1');}}
+export async function initializeLocalPortal(){if(db)return;await fs.mkdir(new URL('../.sites/',import.meta.url),{recursive:true});db=sqliteD1(fileURLToPath(new URL('../.sites/player-portal.sqlite',import.meta.url)));const version=db.prepare('PRAGMA user_version');if((await version.first()).user_version===0){db.exec(await fs.readFile(new URL('./schema.sql',import.meta.url),'utf8'));db.exec('PRAGMA user_version=2');}else if((await version.first()).user_version===1){db.exec(await fs.readFile(new URL('./migrations/0001_session_organizers.sql',import.meta.url),'utf8'));db.exec('PRAGMA user_version=2');}}
 export async function localPortal(request){
  if(!db)throw new Error('Initialize the local database before serving requests.');
  const url=new URL(request.url),organizer=url.pathname.startsWith('/api/portal/');

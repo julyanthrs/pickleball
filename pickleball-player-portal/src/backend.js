@@ -60,18 +60,23 @@ async function limit(db,request,invite,secret){const key=await hash((request.hea
 export async function portalApi(request,env){
  try{
   if(!env.DB)fail('Shared storage is unavailable. Please try again shortly.',503);
-  const db=env.DB,url=new URL(request.url),path=url.pathname,method=request.method;
+  const db=env.DB,url=new URL(request.url),scoped=url.pathname.startsWith('/api/host/'),path=scoped?url.pathname.replace('/api/host/','/api/organizer/'):url.pathname,method=request.method;
   if(path.startsWith('/api/organizer/')){
-    if(!secretEqual(request.headers.get('x-organizer-key'),env.PORTAL_API_KEY))fail('Organizer authorization required.',401);
+    const hostToken=(request.headers.get('authorization')||'').replace(/^Bearer /,'');
+    if(scoped?!/^[A-Za-z0-9_-]{43,100}$/.test(hostToken):!secretEqual(request.headers.get('x-organizer-key'),env.PORTAL_API_KEY))fail('Organizer authorization required.',401);
+    const hostHash=scoped?await hash(hostToken):null;
     if(path==='/api/organizer/rooms'&&method==='POST'){
       const data=await body(request),state=validateState(data.state),clientId=String(data.clientSessionId||'');
       if(!clientId||clientId.length>120)fail('Invalid session identifier.');
       let row=await db.prepare('SELECT * FROM rooms WHERE client_session_id=?').bind(clientId).first();
-      if(!row){const id=uid(),invite=random(),now=Date.now();await db.batch([db.prepare('INSERT INTO rooms(id,client_session_id,invite,state_json,mutation_id,organizer_seen_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(client_session_id) DO NOTHING').bind(id,clientId,invite,JSON.stringify(state),uid(),now,now,now)]);row=await db.prepare('SELECT * FROM rooms WHERE client_session_id=?').bind(clientId).first();}
+      if(scoped)await limit(db,request,'organizer-create',env.PORTAL_API_KEY||'');
+      if(!row){const id=uid(),invite=random(),now=Date.now();const statements=[db.prepare('INSERT INTO rooms(id,client_session_id,invite,state_json,mutation_id,organizer_seen_at,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(client_session_id) DO NOTHING').bind(id,clientId,invite,JSON.stringify(state),uid(),now,now,now)];if(scoped)statements.push(db.prepare('INSERT INTO room_organizers(room_id,token_hash) SELECT id,? FROM rooms WHERE id=?').bind(hostHash,id));await db.batch(statements);row=await db.prepare('SELECT * FROM rooms WHERE client_session_id=?').bind(clientId).first();}
+      if(scoped){const owner=await db.prepare('SELECT token_hash FROM room_organizers WHERE room_id=?').bind(row.id).first();if(!secretEqual(owner?.token_hash,hostHash))fail('This session belongs to another organizer. Open it on the original organizer device.',403);}
       return json(await organizerView(db,row));
     }
     const match=path.match(/^\/api\/organizer\/rooms\/([^/]+)(?:\/(settings|approve|reject))?$/);if(!match)fail('Not found.',404);
     let row=await getRoom(db,match[1]);if(!row)fail('Session not found.',404);
+    if(scoped){const owner=await db.prepare('SELECT token_hash FROM room_organizers WHERE room_id=?').bind(row.id).first();if(!secretEqual(owner?.token_hash,hostHash))fail('Organizer access to this session is required.',403);}
     const operation=match[2];
     if(method==='GET'&&!operation){if(Date.now()-row.organizer_seen_at>30000)await db.prepare('UPDATE rooms SET organizer_seen_at=? WHERE id=?').bind(Date.now(),row.id).run();return json(await organizerView(db,row));}
     if(method==='PUT'&&!operation){

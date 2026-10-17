@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { sqliteD1 } from '../portal/sqlite.mjs';
 import { portalApi } from '../portal/backend.js';
 import { organizerProxy } from '../portal/proxy.js';
+import vercelBridge from '../portal/vercel-bridge.js';
 import { demoState } from '../dist/engine.js';
 import { finishSession } from '../dist/sessions.js';
 const credential=()=>randomBytes(32).toString('base64url');
@@ -29,3 +30,39 @@ test('server validates players and denies unauthorized writes or another session
 test('personal rankings and history reflect real results and corrections',async t=>{const f=await fixture(t);const joined=await f.join('Ranked QR');let room=(await f.org('rooms/'+f.room.roomId)).data;const state=room.state;for(let i=0;i<3;i++)state.history.push({id:crypto.randomUUID(),court:'Court 4',teams:[[joined.data.playerId,'p13'],['p14','p15']],winner:0,scores:[11,5],startedAt:Date.now()-600000,endedAt:Date.now()+i});state.history.push({id:crypto.randomUUID(),court:'Court 4',teams:[[joined.data.playerId,'p13'],['p14','p15']],winner:null,scores:null,startedAt:Date.now()-600000,endedAt:Date.now()+4});let saved=await f.org('rooms/'+f.room.roomId,'PUT',{version:room.version,state});assert.equal(saved.status,200);let me=(await f.me(joined.token)).data;assert.equal(me.stats.games,4);assert.equal(me.stats.wins,3);assert.ok(me.rank);assert.equal(me.leaderboard.find(p=>p.id===me.playerId).points,9);state.history.at(-2).winner=1;state.history.at(-2).scores=[5,11];saved=await f.org('rooms/'+f.room.roomId,'PUT',{version:saved.data.version,state});assert.equal(saved.status,200);me=(await f.me(joined.token)).data;assert.equal(me.stats.wins,2);assert.equal(me.stats.losses,1);assert.equal(me.stats.rate,67);assert.equal(me.history.filter(m=>m.outcome==='Loss').length,1);});
 test('join rate limits bound repeated anonymous submissions',async t=>{const f=await fixture(t);for(let i=0;i<12;i++)assert.equal((await f.join('Limited '+i)).status,201);assert.equal((await f.join('Limited overflow')).status,429);});
 test('private organizer proxy requires identity and same-origin writes',async()=>{const env={PORTAL_API_KEY:'server-secret',PLAYER_PORTAL_ORIGIN:'https://players.test'};assert.equal((await organizerProxy(new Request('https://organizer.test/api/portal/rooms'),env)).status,401);assert.equal((await organizerProxy(new Request('https://organizer.test/api/portal/rooms',{method:'POST',headers:{'oai-authenticated-user-id':'owner',origin:'https://evil.test'},body:'{}'}),env)).status,403);});
+
+test('public organizer capabilities are session scoped and cannot claim existing private rooms',async t=>{
+ const f=await fixture(t),owner=credential(),intruder=credential(),state=demoState();state.session.id=crypto.randomUUID();
+ const create=token=>f.request('/api/host/rooms','POST',{clientSessionId:state.session.id,state},{Authorization:'Bearer '+token});
+ assert.equal((await create('invalid')).status,401);
+ const created=await create(owner);assert.equal(created.status,200);
+ assert.equal((await create(owner)).data.roomId,created.data.roomId);
+ assert.equal((await create(intruder)).status,403);
+ const path='/api/host/rooms/'+created.data.roomId;
+ assert.equal((await f.request(path,'GET',undefined,{Authorization:'Bearer '+intruder})).status,403);
+ const updated=structuredClone(state);updated.session.name='Owned session';
+ assert.equal((await f.request(path,'PUT',{version:1,state:updated},{Authorization:'Bearer '+owner})).status,200);
+ for(const operation of ['settings','approve','reject'])assert.equal((await f.request(path+'/'+operation,'POST',{requireApproval:true,joinsOpen:true},{Authorization:'Bearer '+intruder})).status,403);
+ assert.equal((await f.request('/api/host/rooms','POST',{clientSessionId:f.state.session.id,state:f.state},{Authorization:'Bearer '+intruder})).status,403);
+ const stored=await f.DB.prepare('SELECT token_hash FROM room_organizers WHERE room_id=?').bind(created.data.roomId).first();assert.notEqual(stored.token_hash,owner);
+ assert.equal(JSON.stringify(created.data).includes(owner),false);
+ const playerToken=credential();const player=await f.request('/api/join/'+created.data.invite,'POST',{name:'Public QR',token:playerToken});assert.equal(player.status,201);
+ assert.equal((await f.request(path,'PUT',{version:2,state:updated},{Authorization:'Bearer '+playerToken})).status,403);
+});
+
+test('Vercel bridge joins the shared backend without a master key and preserves organizer isolation',async t=>{
+ const f=await fixture(t),owner=credential(),state=demoState();state.session.id=crypto.randomUUID();
+ t.mock.method(globalThis,'fetch',async(url,options)=>{
+  assert.ok(url.startsWith('https://pickleball-studio-players.julyanthrs.chatgpt.site/api/host/'));
+  assert.equal(new Headers(options.headers).has('x-organizer-key'),false);
+  return portalApi(new Request(url,options),f.env);
+ });
+ const call=(path,method='GET',body,token=owner,origin='https://organizer.vercel.app')=>vercelBridge.fetch(new Request('https://organizer.vercel.app/api/portal/'+path,{method,headers:{'Content-Type':'application/json',Origin:origin,Authorization:'Bearer '+token},body:body?JSON.stringify(body):undefined}));
+ assert.equal((await call('rooms','POST',{state,clientSessionId:state.session.id},owner,'https://other.test')).status,403);
+ const response=await call('rooms','POST',{state,clientSessionId:state.session.id});assert.equal(response.status,200);const room=await response.json();assert.match(room.joinUrl,/^https:\/\/pickleball-studio-players\.julyanthrs\.chatgpt\.site\/join\//);
+ const joined=await f.request('/api/join/'+room.invite,'POST',{name:'Vercel QR',token:credential()});assert.equal(joined.status,201);
+ const latest=await (await call('rooms/'+room.roomId)).json();assert.equal(latest.joined,1);assert.equal(latest.state.players.length,25);
+ const rewritten=await vercelBridge.fetch(new Request('https://organizer.vercel.app/api/live?portalPath=rooms/'+room.roomId,{headers:{Authorization:'Bearer '+owner}}));assert.equal(rewritten.status,200);
+ assert.equal((await call('rooms/'+room.roomId,'GET',undefined,credential())).status,403);
+ assert.equal((await call('../organizer/rooms')).status,404);
+});
