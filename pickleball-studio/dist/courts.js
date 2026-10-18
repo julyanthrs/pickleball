@@ -90,8 +90,10 @@ else{
 $('previous-page').addEventListener('click',()=>{if(view){page=(page+Math.ceil(view.courts.length/6)-1)%Math.ceil(view.courts.length/6);renderBoard();}});
 $('next-page').addEventListener('click',()=>{if(view){page=(page+1)%Math.ceil(view.courts.length/6);renderBoard();}});
 $('dismiss-announcement').addEventListener('click',()=>{hideAnnouncement();nextAnnouncement();});
-const fullscreen=$('fullscreen');fullscreen.hidden=!document.fullscreenEnabled;
+const fullscreen=$('fullscreen');
+function syncFullscreenButton(){fullscreen.hidden=!document.fullscreenEnabled||!!document.fullscreenElement;}
+syncFullscreenButton();
 fullscreen.addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{fullscreen.title='Use your browser’s full-screen option';}});
-document.addEventListener('fullscreenchange',()=>fullscreen.setAttribute('aria-label',document.fullscreenElement?'Exit full screen':'Enter full screen'));
+document.addEventListener('fullscreenchange',syncFullscreenButton);
 let controlsTimer;function showControls(){document.body.classList.add('controls-visible');clearTimeout(controlsTimer);controlsTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),2500);}
 document.addEventListener('pointermove',showControls,{passive:true});document.addEventListener('keydown',showControls);
