@@ -76,3 +76,11 @@ The player portal requires no account. It provides Home, Leaderboard and Matches
 The published organizer uses the public player service and D1, with server-side authorization and hashed player credentials. Local development uses persistent SQLite in the ignored .sites directory and loopback-only links for computer testing. A localhost QR cannot be scanned on a different phone; use the published organizer to create a public session link.
 
 Current verification: 54 automated tests pass, including join concurrency, approval, duplicate reconnect, authorization, result corrections, closed sessions, stale polling and offline approval safeguards. Separate browser clients verified join, queue entry, reload identity, court calls, starts and results. A physical-phone scan remains a manual check.
+
+## Present Courts
+
+Live Session has a **Present Courts** button that opens a separate, read-only browser tab. Drag that tab to the connected TV or second monitor and use its full-screen control. Keep the organizer and display tabs open in the same browser profile on the same computer.
+
+The display shows courts, teams, players, match timers and session status in the existing green design. New lineups trigger a seven-second player call; simultaneous calls queue in court order. Starting the same reserved lineup does not repeat its announcement. Pausing, cancellation and completion remove obsolete calls. More than six courts cycle through pages automatically, with manual previous/next controls.
+
+The display stays pinned to the session it was opened for. It reconnects after organizer reloads, reports a disconnected organizer, and keeps the last saved court view available. It uses a filtered spectator snapshot over BroadcastChannel plus browser storage events; no organizer tokens appear in the display URL or broadcast. It does not provide a separate remote-TV link for another device.

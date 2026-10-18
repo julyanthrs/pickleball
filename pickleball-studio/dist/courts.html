@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#F5F7F2" />
+  <meta name="referrer" content="no-referrer" />
+  <title>Live Courts · Pickleball Studio</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="courts.css" />
+</head>
+<body>
+  <main class="court-display">
+    <header class="display-header">
+      <div class="brand"><img src="icon.svg" alt="" /><span>Pickleball <strong>Studio</strong></span></div>
+      <div class="display-title"><p>LIVE COURTS</p><h1 id="session-name">Your courts, on the big screen.</h1><span id="venue"></span></div>
+      <div class="display-status"><span class="status-pill" id="session-status">Connecting</span><strong id="session-clock">00:00:00</strong></div>
+    </header>
+    <p class="display-notice" id="display-notice" role="status">Connecting to your organizer…</p>
+    <section class="display-courts" id="display-courts" aria-label="Session courts"></section>
+    <footer class="display-footer"><span id="connection-status" role="status">Waiting for live updates</span><div class="page-controls" id="page-controls" hidden><button id="previous-page" aria-label="Previous courts">←</button><span id="page-label"></span><button id="next-page" aria-label="Next courts">→</button></div><span class="read-only-label">Court display · Read only</span></footer>
+  </main>
+  <div class="announcement-layer" id="announcement-layer" hidden><section class="announcement" aria-live="assertive" aria-atomic="true"><button id="dismiss-announcement" aria-label="Dismiss announcement">×</button><div id="announcement-content"></div><div class="announcement-progress" aria-hidden="true"></div></section></div>
+  <button class="fullscreen" id="fullscreen" aria-label="Enter full screen" title="Full screen" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button>
+  <script type="module" src="courts.js"></script>
+</body>
+</html>

@@ -5,8 +5,10 @@ import { emptyState, sessionFlow, suggestAvailableCourts, suggestAfterResult } f
 import { installSelectMenus } from './selects.js';
 import { createSessionCloud, sessionPayload } from './cloud.js';
 import { toString as qrSvg } from './qr.js';
+import { createCourtDisplayHost } from './court-display-host.js';
 
 const icons = {
+  screen:'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',
   trash:'<path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/>',
   grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
   users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -50,6 +52,7 @@ try { const stored = JSON.parse(localStorage.getItem(KEY)); if (stored && ('sess
 if (!state) { state = emptyState(); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { persistence = false; } }
 const app = document.querySelector('#app'), modal = document.querySelector('#modal');
 let cloud=null, inviteSvg='';
+const courtDisplay=createCourtDisplayHost(()=>state,()=>sessionSelected);
 const player = id => state.players.find(p => p.id === id);
 const court = id => state.courts.find(c => c.id === id);
 const name = id => player(id)?.name || 'Former player';
@@ -87,6 +90,7 @@ function commit(label, fn) {
   } catch (e) { state = before; lineupNotice=beforeNotice; const field = modal.open ? modal.querySelector('.form-error') : document.querySelector('#manage-panel .form-error'); if (field) { field.textContent = e.message; field.classList.add('error'); } else notify(e.message); return false; }
 }
 function render() {
+  courtDisplay.publish();
   cloud?.select(sessionSelected?state:null);
   document.body.classList.toggle('entry-mode',!sessionSelected||!state.session);
   if(!sessionSelected||!state.session){app.innerHTML=entryView==='setup'&&setup?setupWizard():entryView==='load'?loadSessionsEntry():welcome();nextRestAt=Infinity;if(!persistence)app.insertAdjacentHTML('beforeend','<div class="save-warning" role="alert">This browser cannot save sessions. Export a session file from Session Settings before leaving your workspace.</div>');return;}
@@ -182,7 +186,7 @@ function importSetupRoster() {
 function footer() { return `<footer class="page-footer"><span class="flex">${icon('leaf')} A little less organizing. A lot more playing.</span><span class="footer-right">${state.demo?'Sample data · ':''}Saved in this browser · ${state.audit.length?'Last saved '+new Intl.DateTimeFormat('en-PH',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Manila'}).format(new Date(state.audit[0].at)):'Ready to play'}</span></footer>`; }
 function sessionHeader() {
  const status={preparing:'Preparing',live:'Live',paused:'Paused',ended:'Completed'}[state.session.status];
- return '<section class="session-head"><div class="grow"><div class="session-title"><h1>'+esc(state.session.name)+'</h1>'+badge(state.session.status==='live'?'playing':state.session.status==='ended'?'finished':'break',status)+'</div><div class="session-sub">'+(state.session.venue?'<span>'+esc(state.session.venue)+'</span><span>·</span>':'')+'<span>'+state.courts.length+' courts</span><span>·</span><span class="flex">'+icon('clock')+'<span data-session-clock>'+sessionElapsed()+'</span></span>'+(state.session.portal?'<span>·</span><span class="portal-sync-state" data-portal-connection>Live sync</span>':'')+'</div></div><div class="session-actions">'+(state.session.status==='live'||state.session.status==='paused'?btn('add-player','Add player','plus','live-player-action')+btn('add-court','Add court','plus','live-court-action','data-source="live" '+(state.courts.length>=12?'disabled title="Sessions support up to 12 courts."':'')):'')+'</div></section>';
+ return '<section class="session-head"><div class="grow"><div class="session-title"><h1>'+esc(state.session.name)+'</h1>'+badge(state.session.status==='live'?'playing':state.session.status==='ended'?'finished':'break',status)+'</div><div class="session-sub">'+(state.session.venue?'<span>'+esc(state.session.venue)+'</span><span>·</span>':'')+'<span>'+state.courts.length+' courts</span><span>·</span><span class="flex">'+icon('clock')+'<span data-session-clock>'+sessionElapsed()+'</span></span>'+(state.session.portal?'<span>·</span><span class="portal-sync-state" data-portal-connection>Live sync</span>':'')+'</div></div><div class="session-actions"><a class="btn present-courts-action" href="courts.html#session='+encodeURIComponent(sessionIdentity(state.session))+'" target="_blank" rel="noopener noreferrer" aria-label="Present Courts (opens a new tab)">'+icon('screen')+'Present Courts</a>'+(state.session.status==='live'||state.session.status==='paused'?btn('add-player','Add player','plus','live-player-action')+btn('add-court','Add court','plus','live-court-action','data-source="live" '+(state.courts.length>=12?'disabled title="Sessions support up to 12 courts."':'')):'')+'</div></section>';
 }
 function completedSession() {
  const courts=state.session.endedCourts||state.courts;
