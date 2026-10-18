@@ -5,13 +5,13 @@ const sessionId=new URLSearchParams(location.hash.slice(1)).get('session');
 let view=null,signature='',rawStored='',lastHeard=0,lastActive=0,page=0,announcements=[],currentAnnouncement=null,announcementTimer,announcementSignature='',channel=null;
 const labels={preparing:'Preparing',live:'Live session',paused:'Session paused',ended:'Session complete'};
 const duration=ms=>{const seconds=Math.max(0,Math.floor(ms/1000));return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(v=>String(v).padStart(2,'0')).join(':');};
-function teamsMarkup(teams){return '<div class="tv-court">'+teams.map((team,i)=>'<div class="tv-team '+(i?'team-b':'team-a')+'"><span class="team-label">TEAM '+(i?'B':'A')+'</span>'+team.map(name=>'<div class="tv-player">'+esc(name)+'</div>').join('')+'</div>').join('')+'</div>';}
+const courtMarkings='<svg class="tv-court-markings" viewBox="0 0 440 200" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="220" height="200" fill="#B2CE9E"/><rect x="220" y="0" width="220" height="200" fill="#E1ECD6"/><rect x="150" y="0" width="140" height="200" fill="#B2CE9E"/><rect x="5" y="5" width="430" height="190" rx="1" fill="none" stroke="#FFFFFF" stroke-width="2.5"/><path d="M150 5v190M290 5v190M5 100h145m140 0h145" fill="none" stroke="#FFFFFF" stroke-width="2.5"/><path d="M220 0v200" stroke="#638154" stroke-width="4"/><path d="M220 0v200" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="3 2"/></svg>';
+function teamsMarkup(teams){return '<div class="tv-court">'+courtMarkings+(teams?teams.map((team,i)=>'<div class="tv-team '+(i?'team-b':'team-a')+'"><span class="team-label">TEAM '+(i?'B':'A')+'</span>'+team.map(name=>'<div class="tv-player">'+esc(name)+'</div>').join('')+'</div>').join(''):'')+'</div>';}
 function renderCourt(c){
   const ended=view.status==='ended',paused=view.status==='paused'||view.archived;
   const assigned=c.teams&&!ended;
   const label=ended?'Completed':paused&&assigned?'Paused':c.status==='pending'?'Up next':c.status==='playing'?'Playing':c.status==='closed'?'Unavailable':'Available';
-  const last=c.lastResult?.scores?'Last result · '+c.lastResult.scores.join(' – '):c.lastResult?'Last game recorded':'';
-  return '<article class="display-court" aria-label="'+esc(c.name)+', '+label+'"><header><h2>'+esc(c.name)+'</h2><span class="court-status '+c.status+'">'+label+'</span></header>'+(assigned?teamsMarkup(c.teams):'<div class="empty-court"><strong>'+(ended?'Thanks for playing.':c.status==='closed'?'Court unavailable':view.status==='preparing'?'Getting ready.':'Ready for the next match.')+'</strong><p>'+(ended?'All completed results are saved.':c.status==='closed'?'This court is outside the rotation.':view.status==='preparing'?'The organizer will start the session soon.':'Your next lineup will appear here.')+'</p></div>')+'<footer><span>'+(c.status==='playing'&&!ended?'<span class="match-time" data-start="'+c.startedAt+'">00:00:00</span>':c.status==='pending'&&!ended?'Four players called':esc(last))+'</span><span>'+(ended?'Session complete':'Play to '+c.target)+'</span></footer></article>';
+  return '<article class="display-court '+c.status+'" aria-label="'+esc(c.name)+', '+label+'"><header><h2>'+esc(c.name)+'</h2><span class="court-status '+c.status+'">'+label+'</span></header>'+teamsMarkup(assigned?c.teams:null)+'</article>';
 }
 function renderBoard(){
   if(!view)return;
@@ -62,6 +62,7 @@ function tick(){
   $('connection-status').textContent=active?'Live updates · Organizer connected':connected?'Organizer is viewing another session':'Organizer disconnected · Showing last saved courts';
   $('connection-status').classList.toggle('offline',!active);
   $('display-notice').textContent=view.status==='ended'?'This open play is complete. No new matches will be called.':view.archived?'This is a saved session. Return to it on the organizer screen to continue live updates.':!connected?'Keep the organizer tab open in this browser. Live updates reconnect automatically.':view.organizerActive===false?'Open this session on the organizer screen to continue.':view.status==='paused'?'Play is paused. Court assignments are saved until the organizer resumes.':'';
+  $('display-notice').hidden=!!connected&&!view.archived&&view.organizerActive!==false;
   const advance=view.status==='live'&&!view.archived&&view.organizerActive!==false;
   const clockNow=Math.min(Date.now(),(lastHeard||view.capturedAt)+8500);
   $('session-clock').textContent=duration(view.elapsedMs+(advance?Math.max(0,clockNow-view.capturedAt):0));
