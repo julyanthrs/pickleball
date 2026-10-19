@@ -4,6 +4,7 @@ import { demoState,reserve,startMatch } from '../dist/engine.js';
 import { snapshotSession,finishSession } from '../dist/sessions.js';
 import { sessionIdentity } from '../dist/entry.js';
 import { courtDisplayView,newCourtAssignments,validCourtAnnouncement } from '../dist/court-display-model.js';
+import { createCourtDisplayHost } from '../dist/court-display-host.js';
 
 test('TV projection contains court names and lineups without organizer credentials or player profiles',()=>{
  const state=demoState();state.session.portal={roomId:'room',hostToken:'private-organizer-token'};
@@ -52,4 +53,35 @@ test('simultaneous court assignments produce distinct announcements in court ord
  const after=courtDisplayView(state,id),calls=newCourtAssignments(before,after);
  assert.deepEqual(calls.map(c=>c.name),['Court 1','Court 2','Court 3']);
  after.organizerActive=false;assert.deepEqual(newCourtAssignments(before,after),[]);
+});
+
+test('organizer can replay a current court without changing play or exposing private data',t=>{
+ const originalChannel=globalThis.BroadcastChannel,originalWindow=globalThis.window;
+ const packets=[];let receive;
+ t.mock.timers.enable({apis:['setInterval']});
+ globalThis.BroadcastChannel=class {
+  addEventListener(type,listener){receive=listener;}
+  postMessage(packet){packets.push(packet);}
+  close(){}
+ };
+ globalThis.window={addEventListener(){}};
+ t.after(()=>{globalThis.BroadcastChannel=originalChannel;globalThis.window=originalWindow;});
+ const state=demoState(),id=sessionIdentity(state.session);let selected=true;
+ state.session.portal={hostToken:'private-token'};
+ const before=structuredClone(state),host=createCourtDisplayHost(()=>state,()=>selected);
+ const court=state.courts.find(c=>c.status==='playing');
+ assert.equal(host.announce(court.id),false,'requires an opened presentation');
+ receive({data:{type:'watch-courts',sessionId:id}});
+ assert.equal(host.announce(court.id),true);
+ assert.equal(host.announce(court.id),true,'same lineup can be replayed');
+ const calls=packets.filter(p=>p.type==='announce-court');
+ assert.equal(calls.length,2);
+ assert.equal(calls[0].sessionId,id);assert.equal(calls[0].courtId,court.id);
+ assert.equal(calls[0].key,calls[0].view.courts.find(c=>c.id===court.id).key);
+ assert.equal(JSON.stringify(calls).includes('private-token'),false);
+ assert.deepEqual(state,before);
+ assert.equal(host.announce(state.courts.find(c=>c.status==='available').id),false);
+ selected=false;assert.equal(host.announce(court.id),false);
+ selected=true;state.session.status='paused';assert.equal(host.announce(court.id),false);
+ state.session.status='ended';assert.equal(host.announce(court.id),false);
 });

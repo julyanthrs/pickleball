@@ -56,6 +56,13 @@ function nextAnnouncement(){
   announcementTimer=setTimeout(()=>{hideAnnouncement();nextAnnouncement();},7000);
 }
 function hideAnnouncement(){clearTimeout(announcementTimer);currentAnnouncement=null;announcementSignature='';$('announcement-layer').hidden=true;}
+function replayAnnouncement(courtId,key){
+  const court=view?.courts.find(c=>c.id===courtId&&c.key===key);
+  if(!court?.key||!validCourtAnnouncement(court,view))return;
+  announcements=announcements.filter(c=>c.key!==key);
+  if(currentAnnouncement?.key===key)hideAnnouncement();
+  announcements.unshift(court);nextAnnouncement();
+}
 function tick(){
   if(!view)return;
   const connected=lastHeard&&Date.now()-lastHeard<8500,active=connected&&view.organizerActive!==false;
@@ -79,7 +86,7 @@ else{
   readStored();
   if(typeof BroadcastChannel!=='undefined'){
     channel=new BroadcastChannel(COURT_CHANNEL);
-    channel.addEventListener('message',e=>{const packet=e.data;if(packet?.type!=='courts'||packet.sessionId!==sessionId)return;if(packet.view?.organizerActive===false&&Date.now()-lastActive<5000)return;lastHeard=Date.now();if(packet.view?.organizerActive)lastActive=lastHeard;applyView(packet.view);});watch();
+    channel.addEventListener('message',e=>{const packet=e.data;if(!['courts','announce-court'].includes(packet?.type)||packet.sessionId!==sessionId)return;if(packet.view?.organizerActive===false&&Date.now()-lastActive<5000)return;lastHeard=Date.now();if(packet.view?.organizerActive)lastActive=lastHeard;applyView(packet.view);if(packet.type==='announce-court')replayAnnouncement(packet.courtId,packet.key);});watch();
   }
   window.addEventListener('storage',e=>{if(e.key===WORKSPACE_KEY)readStored();});
   setInterval(()=>{readStored();watch();tick();},2000);
