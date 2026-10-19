@@ -1,6 +1,6 @@
 export function courtAnnouncementLines(court){
-  return [court.name+'.','Team one. '+court.teams[0].join(' and ')+'.',
-    'Team two. '+court.teams[1].join(' and ')+'.','Please proceed to '+court.name+'.'];
+  return [court.name+'.','Team one, '+court.teams[0].join(' and ')+'.',
+    'Team two, '+court.teams[1].join(' and ')+'.','Please proceed to '+court.name+'.'];
 }
 
 export function announcementVoice(voices){
@@ -31,11 +31,10 @@ export function createCourtAnnouncer({synthesis=globalThis.speechSynthesis,Utter
     }
     function speak(){
       if(token!==generation)return;
-      const text=completed===lines.length?'Once again. '+script[completed]:script[completed];
+      const text=completed===lines.length?'Once again, '+script[completed]:script[completed];
       const utterance=new Utterance(text);current=utterance;
       if(voice)utterance.voice=voice;
-      const teamLine=[1,2].includes(completed%lines.length);
-      utterance.lang=voice?.lang||'en-US';utterance.rate=teamLine?.90:.94;utterance.pitch=1;utterance.volume=1;
+      utterance.lang=voice?.lang||'en-US';utterance.rate=1;utterance.pitch=1;utterance.volume=1;
       const status=phase=>onStatus({phase,completed,total:script.length,reading:Math.floor(completed/lines.length)+1});
       utterance.onstart=()=>{
         if(token!==generation)return;
@@ -45,7 +44,7 @@ export function createCourtAnnouncer({synthesis=globalThis.speechSynthesis,Utter
         if(token!==generation)return;
         clearTimeout(watchdog);current=null;completed++;
         if(completed===script.length){generation++;onStatus({phase:'complete',completed,total:script.length});onComplete();}
-        else watchdog=setTimeout(speak,completed===lines.length?1000:400);
+        else watchdog=setTimeout(speak,completed===lines.length?800:180);
       };
       utterance.onerror=e=>fail(e.error||'synthesis-failed');
       status('starting');watchdog=setTimeout(()=>fail('not-started'),8000);

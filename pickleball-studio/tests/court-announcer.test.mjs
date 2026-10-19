@@ -13,17 +13,20 @@ function harness(t){
 
 test('reads court, both teams and destination twice, and completes only after the final end event',t=>{
  const h=harness(t);h.announcer.play(court);
- const expected=[...courtAnnouncementLines(court),...courtAnnouncementLines(court)];expected[4]='Once again. '+expected[4];
- assert.deepEqual(expected.slice(0,4),['Court 3.','Team one. Isa Garcia and Jules Rivera.','Team two. Kai Mendoza and Lia Torres.','Please proceed to Court 3.']);
+ const expected=[...courtAnnouncementLines(court),...courtAnnouncementLines(court)];expected[4]='Once again, '+expected[4];
+ assert.deepEqual(expected.slice(0,4),['Court 3.','Team one, Isa Garcia and Jules Rivera.','Team two, Kai Mendoza and Lia Torres.','Please proceed to Court 3.']);
  for(let i=0;i<expected.length;i++){
   assert.equal(h.utterances.length,i+1,'only one utterance at a time');
   assert.equal(h.utterances[i].text,expected[i]);
+  assert.equal(h.utterances[i].rate,1,'maintains a consistent natural pace');
   h.utterances[i].onstart();t.mock.timers.tick(5500);
   assert.equal(h.finished,0,'old visual timeout cannot finish speech');
   h.utterances[i].onend();
   if(i<expected.length-1){
    assert.equal(h.utterances.length,i+1,'leaves a clear pause between sections');
-   t.mock.timers.tick(i===3?1000:400);
+   const pause=i===3?800:180;
+   t.mock.timers.tick(pause-1);assert.equal(h.utterances.length,i+1);
+   t.mock.timers.tick(1);
   }
  }
  assert.equal(h.finished,1);assert.equal(h.statuses.at(-1).completed,8);
@@ -50,7 +53,7 @@ test('waits for installed voices and uses the same female voice for both reading
  for(let i=0;i<8;i++){
   assert.equal(utterances[i].voice,zira);
   utterances[i].onstart();utterances[i].onend();
-  t.mock.timers.tick(i===3?1000:400);
+  t.mock.timers.tick(i===3?800:180);
  }
 });
 
