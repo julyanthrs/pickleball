@@ -6,12 +6,14 @@ let view=null,signature='',rawStored='',lastHeard=0,lastActive=0,page=0,announce
 const labels={preparing:'Preparing',live:'Live session',paused:'Session paused',ended:'Session complete'};
 const duration=ms=>{const seconds=Math.max(0,Math.floor(ms/1000));return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(v=>String(v).padStart(2,'0')).join(':');};
 const courtMarkings='<svg class="tv-court-markings" viewBox="0 0 440 200" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="220" height="200" fill="#B2CE9E"/><rect x="220" y="0" width="220" height="200" fill="#E1ECD6"/><rect x="150" y="0" width="140" height="200" fill="#B2CE9E"/><rect x="5" y="5" width="430" height="190" rx="1" fill="none" stroke="#FFFFFF" stroke-width="2.5"/><path d="M150 5v190M290 5v190M5 100h145m140 0h145" fill="none" stroke="#FFFFFF" stroke-width="2.5"/><path d="M220 0v200" stroke="#638154" stroke-width="4"/><path d="M220 0v200" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="3 2"/></svg>';
-function teamsMarkup(teams){return '<div class="tv-court">'+courtMarkings+(teams?teams.map((team,i)=>'<div class="tv-team '+(i?'team-b':'team-a')+'"><span class="team-label">TEAM '+(i?'B':'A')+'</span>'+team.map(name=>'<div class="tv-player">'+esc(name)+'</div>').join('')+'</div>').join(''):'')+'</div>';}
+function teamsMarkup(teams,rally=false){return '<div class="tv-court">'+courtMarkings+(teams?teams.map((team,i)=>'<div class="tv-team '+(i?'team-b':'team-a')+'"><span class="team-label">TEAM '+(i?'B':'A')+'</span>'+team.map(name=>'<div class="tv-player">'+esc(name)+'</div>').join('')+'</div>').join(''):'')+(rally?rallyMarkup:'')+'</div>';}
+const rallyMarkup='<span class="court-rally" aria-hidden="true"><span class="rally-flight"><span class="rally-shadow"></span><svg class="rally-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="#E6DC84" stroke="#F8F5D1" stroke-width="1.2"/><path d="M4 11a8 8 0 0 1 8-8" fill="none" stroke="#FFF8CA" stroke-width="2" stroke-linecap="round"/><g fill="#7B823E"><ellipse cx="8" cy="7" rx="1.4" ry="1.1"/><ellipse cx="15" cy="6.5" rx="1.2" ry="1"/><circle cx="11.5" cy="12" r="1.5"/><ellipse cx="18" cy="12" rx="1" ry="1.5"/><ellipse cx="6" cy="13" rx="1" ry="1.5"/><ellipse cx="9" cy="18" rx="1.3" ry="1"/><ellipse cx="16" cy="17" rx="1.2" ry="1.1"/></g></svg></span></span>';
 function renderCourt(c){
   const ended=view.status==='ended',paused=view.status==='paused'||view.archived;
   const assigned=c.teams&&!ended;
   const label=ended?'Completed':paused&&assigned?'Paused':c.status==='pending'?'Up next':c.status==='playing'?'Playing':c.status==='closed'?'Unavailable':'Available';
-  return '<article class="display-court '+c.status+'" aria-label="'+esc(c.name)+', '+label+'"><header><h2>'+esc(c.name)+'</h2><span class="court-status '+c.status+'">'+label+'</span></header>'+teamsMarkup(assigned?c.teams:null)+'</article>';
+  const rally=assigned&&c.status==='playing'&&view.status==='live'&&!paused;
+  return '<article class="display-court '+c.status+'" aria-label="'+esc(c.name)+', '+label+'"><header><h2>'+esc(c.name)+'</h2><span class="court-status '+c.status+'">'+label+'</span></header>'+teamsMarkup(assigned?c.teams:null,rally)+'</article>';
 }
 function renderBoard(){
   if(!view)return;
@@ -66,6 +68,7 @@ function replayAnnouncement(courtId,key){
 function tick(){
   if(!view)return;
   const connected=lastHeard&&Date.now()-lastHeard<8500,active=connected&&view.organizerActive!==false;
+  document.body.classList.toggle('rally-paused',!active||view.status!=='live'||view.archived);
   $('connection-status').textContent=active?'Live updates · Organizer connected':connected?'Organizer is viewing another session':'Organizer disconnected · Showing last saved courts';
   $('connection-status').classList.toggle('offline',!active);
   $('display-notice').textContent=view.status==='ended'?'This open play is complete. No new matches will be called.':view.archived?'This is a saved session. Return to it on the organizer screen to continue live updates.':!connected?'Keep the organizer tab open in this browser. Live updates reconnect automatically.':view.organizerActive===false?'Open this session on the organizer screen to continue.':view.status==='paused'?'Play is paused. Court assignments are saved until the organizer resumes.':'';
