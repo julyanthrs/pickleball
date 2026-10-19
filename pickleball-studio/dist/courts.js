@@ -3,25 +3,25 @@ import { createCourtAnnouncer } from './court-announcer.js';
 
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sessionId=new URLSearchParams(location.hash.slice(1)).get('session');
-let view=null,signature='',rawStored='',lastHeard=0,lastActive=0,page=0,announcements=[],currentAnnouncement=null,announcementSignature='',channel=null,voiceEnabled=false;
+let view=null,signature='',rawStored='',lastHeard=0,lastActive=0,page=0,announcements=[],currentAnnouncement=null,announcementSignature='',channel=null,voiceNeedsGesture=false;
 const announcer=createCourtAnnouncer({onStatus:updateVoiceStatus,onComplete:()=>{hideAnnouncement();nextAnnouncement();}});
 function updateVoiceStatus(status){
   const {phase,completed,total,reading}=status;
   const failed=phase==='error'||phase==='unavailable';
-  $('announcement-voice-status').textContent=failed?(phase==='unavailable'?'Voice playback is unavailable in this browser.':'Voice playback could not finish. Check your audio, then retry.'):phase==='complete'?'Announcement read twice.':'Reading '+reading+' of 2'+(phase==='starting'?' · Preparing voice…':' · Calling players…');
-  $('retry-announcement').hidden=!failed||phase==='unavailable';
-  $('retry-announcement').textContent='Retry announcement';
+  const blocked=['not-allowed','not-started'].includes(status.error);
+  $('announcement-voice-status').textContent=failed?(phase==='unavailable'?'Voice playback is unavailable in this browser.':blocked?'Your browser blocked audio. Click anywhere on the presentation to start this announcement.':'Voice playback could not finish. Check your audio and click the presentation to retry.'):phase==='complete'?'Announcement read twice.':'Reading '+reading+' of 2'+(phase==='starting'?' · Preparing voice…':' · Calling players…');
   document.querySelector('.announcement-progress').style.transform='scaleX('+(completed/total)+')';
-  if(failed){voiceEnabled=false;$('enable-voice').hidden=false;}
+  voiceNeedsGesture=phase==='error';
 }
 function speakCurrentAnnouncement(){
   if(!currentAnnouncement)return;
-  $('retry-announcement').hidden=true;announcer.play(currentAnnouncement);
+  voiceNeedsGesture=false;announcer.play(currentAnnouncement);
 }
-function enableVoice(){
-  voiceEnabled=true;$('enable-voice').hidden=true;
-  if(currentAnnouncement)speakCurrentAnnouncement();
-  else $('enable-voice').textContent='Enable voice';
+function retryVoiceAfterGesture(event){
+  if(!voiceNeedsGesture||!currentAnnouncement||!event.isTrusted||event.target?.closest?.('#dismiss-announcement'))return;
+  if(event.type==='keydown'&&(event.repeat||!['Enter',' '].includes(event.key)))return;
+  if(event.type==='pointerup'&&event.button!==0)return;
+  speakCurrentAnnouncement();
 }
 const labels={preparing:'Preparing',live:'Live session',paused:'Session paused',ended:'Session complete'};
 const duration=ms=>{const seconds=Math.max(0,Math.floor(ms/1000));return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(v=>String(v).padStart(2,'0')).join(':');};
@@ -75,13 +75,9 @@ function nextAnnouncement(){
   const courtPage=Math.floor(view.courts.findIndex(c=>c.id===currentAnnouncement.id)/6);if(page!==courtPage){page=courtPage;renderBoard();}
   renderAnnouncement();$('announcement-layer').hidden=false;
   document.querySelector('.announcement-progress').style.transform='scaleX(0)';
-  if(voiceEnabled)speakCurrentAnnouncement();
-  else{
-    $('announcement-voice-status').textContent='Enable voice to read this announcement twice.';
-    $('retry-announcement').textContent='Play announcement';$('retry-announcement').hidden=false;
-  }
+  speakCurrentAnnouncement();
 }
-function hideAnnouncement(){announcer.cancel();currentAnnouncement=null;announcementSignature='';$('announcement-layer').hidden=true;}
+function hideAnnouncement(){announcer.cancel();voiceNeedsGesture=false;currentAnnouncement=null;announcementSignature='';$('announcement-layer').hidden=true;}
 function replayAnnouncement(courtId,key){
   const court=view?.courts.find(c=>c.id===courtId&&c.key===key);
   if(!court?.key||!validCourtAnnouncement(court,view))return;
@@ -124,13 +120,13 @@ else{
 $('previous-page').addEventListener('click',()=>{if(view){page=(page+Math.ceil(view.courts.length/6)-1)%Math.ceil(view.courts.length/6);renderBoard();}});
 $('next-page').addEventListener('click',()=>{if(view){page=(page+1)%Math.ceil(view.courts.length/6);renderBoard();}});
 $('dismiss-announcement').addEventListener('click',()=>{hideAnnouncement();nextAnnouncement();});
-$('enable-voice').addEventListener('click',enableVoice);
-$('retry-announcement').addEventListener('click',enableVoice);
+document.addEventListener('pointerup',retryVoiceAfterGesture,{passive:true});
+document.addEventListener('keydown',retryVoiceAfterGesture);
 window.addEventListener('pagehide',()=>announcer.cancel());
 const fullscreen=$('fullscreen');
 function syncFullscreenButton(){fullscreen.hidden=!document.fullscreenEnabled||!!document.fullscreenElement;}
 syncFullscreenButton();
-fullscreen.addEventListener('click',async()=>{if(!voiceEnabled)enableVoice();try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{fullscreen.title='Use your browser’s full-screen option';}});
+fullscreen.addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{fullscreen.title='Use your browser’s full-screen option';}});
 document.addEventListener('fullscreenchange',syncFullscreenButton);
 let controlsTimer;function showControls(){document.body.classList.add('controls-visible');clearTimeout(controlsTimer);controlsTimer=setTimeout(()=>document.body.classList.remove('controls-visible'),2500);}
 document.addEventListener('pointermove',showControls,{passive:true});document.addEventListener('keydown',showControls);
