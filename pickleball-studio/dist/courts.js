@@ -53,7 +53,7 @@ function nextAnnouncement(){
   const courtPage=Math.floor(view.courts.findIndex(c=>c.id===currentAnnouncement.id)/6);if(page!==courtPage){page=courtPage;renderBoard();}
   renderAnnouncement();$('announcement-layer').hidden=false;
   const progress=document.querySelector('.announcement-progress');progress.replaceWith(progress.cloneNode());
-  announcementTimer=setTimeout(()=>{hideAnnouncement();nextAnnouncement();},7000);
+  announcementTimer=setTimeout(()=>{hideAnnouncement();nextAnnouncement();},5500);
 }
 function hideAnnouncement(){clearTimeout(announcementTimer);currentAnnouncement=null;announcementSignature='';$('announcement-layer').hidden=true;}
 function replayAnnouncement(courtId,key){
