@@ -1,6 +1,6 @@
-import { createSession, startSession, snapshotSession, openSavedSession } from './sessions.js';
+import { createSession, startSession, snapshotSession, openSavedSession, archiveCurrentSession, normalizeSavedSessions } from './sessions.js';
 
-export const sessionIdentity = session => session ? session.id||'legacy-'+session.startedAt : null;
+export { sessionIdentity } from './sessions.js';
 
 export function defaultSetup() {
  return {step:1,name:'',venue:'',courts:4,target:11,mode:'fair',rest:0,strictSkill:false,maxGap:1,
@@ -28,12 +28,14 @@ export function importSessionRecord(state,file,now=Date.now()) {
  // File validation happens before this operation. Keep existing records when importing.
  const imported=structuredClone(file);
  const holder={session:null,archive:[imported]};openSavedSession(holder,0,now);
- const retained=state.session?[snapshotSession(state,now),...state.archive]:[...state.archive];
+ archiveCurrentSession(state,now);
+ const retained=[...state.archive];
  for(const key of ['session','players','courts','history','settings','demo'])state[key]=holder[key];
  state.session={...state.session,sourceSessionId:state.session.id||null,id:crypto.randomUUID(),importedAt:now};
  const importedArchive=(imported.archive||[]).map(saved=>({...saved,session:{...saved.session,
    sourceSessionId:saved.session.id||null,id:crypto.randomUUID(),importedAt:now}}));
  state.archive=[...retained,...importedArchive];
+ normalizeSavedSessions(state);
 }
 
 export function settingsImpact(state,next) {

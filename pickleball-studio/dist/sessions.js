@@ -1,6 +1,26 @@
 import { assertState, queue } from './engine.js';
 import { emptyState } from './flow.js';
 
+export const sessionIdentity=session=>session?(session.id||(Number.isFinite(session.startedAt)?'legacy-'+session.startedAt:null)):null;
+
+export function normalizeSavedSessions(state){
+  const currentId=sessionIdentity(state.session),positions=new Map(),saved=[];
+  for(const record of state.archive){
+    const id=sessionIdentity(record.session);
+    if(id&&id===currentId)continue;
+    if(!id||!positions.has(id)){
+      if(id)positions.set(id,saved.length);
+      saved.push(record);
+    }else{
+      const index=positions.get(id);
+      if((record.savedAt||0)>(saved[index].savedAt||0))saved[index]=record;
+    }
+  }
+  const changed=saved.length!==state.archive.length||saved.some((record,i)=>record!==state.archive[i]);
+  if(changed)state.archive=saved;
+  return changed;
+}
+
 export function deleteSavedSession(state,index) {
   if(!Number.isInteger(index)||index < -1)throw new Error('This saved session is no longer available.');
   if(index===-1){
@@ -27,16 +47,16 @@ export function snapshotSession(state, now=Date.now()) {
     savedAt:now,durationMs:elapsedSession(state,now)});
 }
 
-function keepCurrent(state, now) {
+export function archiveCurrentSession(state, now=Date.now()) {
+  normalizeSavedSessions(state);
   if (state.session) state.archive.unshift(snapshotSession(state,now));
-  // Session history is retained in full; switching sessions never drops older records.
 }
 
 export function createSession(state, {name,courtNames,players=[],settings=state.settings}, now=Date.now()) {
   if (!name.trim()||name.trim().length>60) throw new Error('Enter a session name of up to 60 characters.');
   if (!courtNames.length||courtNames.length>12) throw new Error('Choose between 1 and 12 courts.');
   if(players.length>120) throw new Error('Sessions support up to 120 players.');
-  keepCurrent(state,now);
+  archiveCurrentSession(state,now);
   const idMap=new Map(players.map(p=>[p.id,crypto.randomUUID()]));
   state.session={id:crypto.randomUUID(),name:name.trim(),venue:state.session?.venue||'',createdAt:now,
     startedAt:now,status:'preparing',pausedTime:0};
@@ -73,8 +93,13 @@ export function removeCourt(state,id) {
 }
 
 export function openSavedSession(state,index,now=Date.now()) {
-  const saved=state.archive[index];
-  if(!saved)throw new Error('This saved session is no longer available.');
+  const selected=state.archive[index];
+  if(!selected)throw new Error('This saved session is no longer available.');
+  const id=sessionIdentity(selected.session);
+  // Opening an old copy of the selected session must never roll back current edits.
+  if(id&&id===sessionIdentity(state.session)){normalizeSavedSessions(state);return;}
+  const saved=id?state.archive.filter(record=>sessionIdentity(record.session)===id)
+    .reduce((latest,record)=>(record.savedAt||0)>(latest.savedAt||0)?record:latest,selected):selected;
   const restored=structuredClone(saved);
   // Older archives contain results only. Open them as completed sessions, never invent lineups.
   if(!restored.courts||!restored.settings) {
@@ -93,7 +118,8 @@ export function openSavedSession(state,index,now=Date.now()) {
     restored.courts.forEach(c=>{for(const key of ['startedAt','reservedAt'])if(Number.isFinite(c[key]))c[key]+=inactive;});
   }
   assertState(restored);
-  state.archive.splice(index,1);keepCurrent(state,now);
+  state.archive=id?state.archive.filter(record=>sessionIdentity(record.session)!==id):state.archive.filter((record,i)=>i!==index);
+  archiveCurrentSession(state,now);
   for(const key of ['session','players','courts','settings','history','demo'])state[key]=restored[key];
 }
 

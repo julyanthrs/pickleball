@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {demoState,queue,playerState,reserve,startMatch,assertState} from '../dist/engine.js';
 import {emptyState,sessionFlow} from '../dist/flow.js';
-import {elapsedSession,snapshotSession,createSession,startSession,finishSession,openSavedSession,duplicateSession,removeCourt,deleteSavedSession} from '../dist/sessions.js';
+import {elapsedSession,snapshotSession,createSession,startSession,finishSession,openSavedSession,duplicateSession,removeCourt,deleteSavedSession,normalizeSavedSessions,sessionIdentity} from '../dist/sessions.js';
 
 test('deleting an archived session preserves the active session and other saves',()=>{
  const s=demoState();s.archive=[snapshotSession(s),snapshotSession(s)];
@@ -83,6 +83,64 @@ test('court removal preserves history and rejects assigned or last courts',()=>{
 });
 
 test('switching sessions retains archives beyond the former 30-session limit',()=>{
- const s=demoState();s.archive=Array.from({length:31},(_,i)=>({...snapshotSession(s),session:{...s.session,name:'Saved '+i}}));
+ const s=demoState();s.archive=Array.from({length:31},(_,i)=>({...snapshotSession(s),session:{...s.session,id:'saved-'+i,name:'Saved '+i}}));
  createSession(s,{name:'New',courtNames:['Court 1']});assert.equal(s.archive.length,32);assert.equal(s.archive.at(-1).session.name,'Saved 30');
+});
+
+test('repeatedly loading and updating a session keeps one latest record for each session',()=>{
+ const s=demoState(10000000),first=sessionIdentity(s.session);
+ createSession(s,{name:'Next open play',courtNames:['North'],players:[]},10100000);
+ const second=sessionIdentity(s.session);
+ for(let i=0;i<5;i++){
+  openSavedSession(s,s.archive.findIndex(record=>sessionIdentity(record.session)===first),10200000+i*2000);
+  s.players[0].name='Updated player '+i;s.settings.target=15;
+  s.history[0].scores=[11,9];s.history[0].winner=0;
+  openSavedSession(s,s.archive.findIndex(record=>sessionIdentity(record.session)===second),10201000+i*2000);
+  assert.equal(s.archive.length,1);assert.equal(sessionIdentity(s.archive[0].session),first);
+  assert.equal(s.archive[0].players[0].name,'Updated player '+i);
+  assert.equal(s.archive[0].settings.target,15);assert.deepEqual(s.archive[0].history[0].scores,[11,9]);assertState(s);
+ }
+ openSavedSession(s,0,10300000);
+ assert.equal(sessionIdentity(s.session),first);assert.equal(s.players[0].name,'Updated player 4');
+ assert.equal(s.archive.length,1);assert.equal(sessionIdentity(s.archive[0].session),second);
+});
+
+test('existing duplicate saves keep the latest snapshot and the active session stays authoritative',()=>{
+ const s=demoState(10000000),staleCurrent=snapshotSession(s,10001000);
+ s.players[0].name='Current edit';
+ const older={...snapshotSession(s,10002000),session:{...s.session,id:'other',name:'Other session'}};
+ const latest=structuredClone(older);latest.savedAt=10004000;latest.players[0].name='Latest saved edit';
+ latest.history=latest.history.slice(0,1);
+ s.archive=[staleCurrent,older,latest];
+ assert.equal(normalizeSavedSessions(s),true);assert.deepEqual(s.archive,[latest]);
+ assert.equal(s.players[0].name,'Current edit');assert.equal(normalizeSavedSessions(s),false);
+ openSavedSession(s,0,10005000);
+ assert.equal(s.players[0].name,'Latest saved edit');assert.equal(s.history.length,1);
+ assert.equal(s.archive.length,1);assert.equal(s.archive[0].players[0].name,'Current edit');
+});
+
+test('loading an older duplicate selects its latest save and removes all versions from the archive',()=>{
+ const s=demoState(10000000);
+ const older={...snapshotSession(s,10001000),session:{...s.session,id:'saved',name:'Saved session'}};
+ const latest=structuredClone(older);latest.savedAt=10003000;latest.players[0].name='Latest player';
+ s.archive=[older,latest];
+ openSavedSession(s,0,10005000);
+ assert.equal(s.session.id,'saved');assert.equal(s.players[0].name,'Latest player');
+ assert.equal(s.archive.length,1);assert.ok(s.archive.every(record=>record.session.id!=='saved'));assertState(s);
+});
+
+test('opening a stale copy of the current session never rolls back its live data',()=>{
+ const s=demoState(10000000);s.archive=[snapshotSession(s,10001000)];
+ s.players[0].name='Keep this edit';const current=snapshotSession(s,10002000);
+ openSavedSession(s,0,10003000);
+ assert.deepEqual(snapshotSession(s,10002000),current);assert.deepEqual(s.archive,[]);
+});
+
+test('same-name sessions and deliberate duplicates remain separate while legacy copies consolidate',()=>{
+ const s=demoState(10000000),legacy=snapshotSession(s,10001000);s.session=null;
+ const renamed=structuredClone(legacy);renamed.savedAt=10002000;renamed.session.name='Renamed session';
+ const distinct={...structuredClone(legacy),session:{...legacy.session,id:'separate-session'}};
+ s.archive=[legacy,distinct,renamed];normalizeSavedSessions(s);
+ assert.equal(s.archive.length,2);assert.equal(s.archive[0].session.name,'Renamed session');
+ assert.equal(s.archive[1].session.name,legacy.session.name);
 });
