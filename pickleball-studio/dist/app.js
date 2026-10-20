@@ -1,3 +1,4 @@
+import {welcomeScene} from './welcome-scene.js';
 import { STATES, stats, playerState, queue, suggest, reserve, startMatch, completeMatch, validateLineup, assertState, scoreError, demoState, cancelPartnerLock } from './engine.js';
 import { elapsedSession, createSession, startSession, finishSession, removeCourt, snapshotSession, openSavedSession, duplicateSession, deleteSavedSession, archiveCurrentSession, normalizeSavedSessions } from './sessions.js';
 import { defaultSetup, createConfiguredSession, exportSessionFile, importSessionRecord, settingsImpact, sessionIdentity } from './entry.js';
@@ -51,6 +52,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const initials = name => name.trim().split(/\s+/).slice(0,2).map(s => s[0]).join('').toUpperCase();
 const KEY = 'pickleball-studio-v1';
 let entryReturn=null;
+let welcomeMotionPaused=false;
 let state, sessionSelected=false, selectedSessionId=null, entryView='welcome', setup=null, page = 'live', manageOpen=false, manageTab='general', courtFilter = 'all', playerFilter = 'all', playerSearch = '', queueSearch = '', lastUndo = null, dialogContext = {}, persistence = true, toastTimer, nextRestAt=0, lineupNotice = '';
 try { const stored = JSON.parse(localStorage.getItem(KEY)); if (stored && ('session' in stored) && stored.players && stored.courts && stored.history) { assertState(stored); state = stored; if(normalizeSavedSessions(state)){state.revision++;localStorage.setItem(KEY,JSON.stringify(state));} } } catch { persistence = false; }
 if (!state) { state = emptyState(); try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { persistence = false; } }
@@ -149,7 +151,7 @@ function entryBrand() {
 }
 function welcome() {
  const choice=(action,title,glyph,variant='')=>'<button class="surface entry-choice '+variant+'" data-action="'+action+'"><span class="entry-choice-icon">'+icon(glyph)+'</span><span class="entry-choice-title">'+title+'</span><span class="entry-choice-arrow">'+icon('arrow')+'</span></button>';
- return '<main class="entry-shell welcome-entry"><header class="between">'+entryBrand()+(canReturnToSession()?btn('entry-back','Back to session','back','quiet entry-back'):'')+'</header><section class="entry-welcome" aria-labelledby="welcome-title"><div class="welcome-copy"><h1 id="welcome-title">Your court.<br><span>Your call.</span></h1></div><div class="entry-choices">'+choice('new-session','Create New Session','plus','entry-choice-primary')+choice('load-sessions','Load Saved Session','court')+choice('entry-reclub','Import from Reclub','upload','entry-choice-reclub')+'</div><button class="text-btn entry-demo" data-action="sample">Explore Demo Session '+icon('arrow')+'</button></section><footer class="entry-footer">'+icon('shield')+'<span>Saved in this browser.</span></footer></main>';
+ return '<main class="entry-shell welcome-entry'+(welcomeMotionPaused?' motion-paused':'')+'">'+welcomeScene+'<header class="between">'+entryBrand()+'<div class="welcome-header-actions">'+(canReturnToSession()?btn('entry-back','Back to session','back','quiet entry-back'):'')+ibtn('toggle-welcome-motion',welcomeMotionPaused?'Resume background animation':'Pause background animation',welcomeMotionPaused?'play':'pause','welcome-motion-toggle')+'</div></header><section class="entry-welcome" aria-labelledby="welcome-title"><div class="welcome-copy"><h1 id="welcome-title">Your court.<br><span>Your call.</span></h1></div><div class="entry-choices">'+choice('new-session','Create New Session','plus','entry-choice-primary')+choice('load-sessions','Load Saved Session','court')+choice('entry-reclub','Import from Reclub','upload','entry-choice-reclub')+'</div><button class="text-btn entry-demo" data-action="sample">Explore Demo Session '+icon('arrow')+'</button></section><footer class="entry-footer">'+icon('shield')+'<span>Saved in this browser.</span></footer></main>';
 }
 function deleteSessionButton(index,name) {
  return btn('delete-session','Delete Session','trash','danger','data-index="'+index+'" aria-label="Delete session '+esc(name)+'"');
@@ -421,6 +423,7 @@ async function handleAction(e) {
     case 'entry-back':if(canReturnToSession())returnToSession();else{entryView='welcome';setup=null;modal.close();render();window.scrollTo({top:0,behavior:'instant'});}break;
     case 'load-sessions':entryView='load';render();break;
     case 'load-current':openWorkspace();break;
+    case 'toggle-welcome-motion':{welcomeMotionPaused=!welcomeMotionPaused;document.querySelector('.welcome-entry')?.classList.toggle('motion-paused',welcomeMotionPaused);const label=welcomeMotionPaused?'Resume background animation':'Pause background animation';target.setAttribute('aria-label',label);target.title=label;target.innerHTML=icon(welcomeMotionPaused?'play':'pause');break;}
     case 'entry-reclub':startSetup();rosterImporter.open('setup');break;
     case 'import-session':importFile('session');break;
     case 'confirm-import':if(commit('Imported session file',()=>importSessionRecord(state,dialogContext.incomingSession))){openWorkspace();notify('Session imported. Existing sessions were preserved.');}break;

@@ -1,9 +1,9 @@
 /* Clear space for session choices, with the court composed into the page background. */
 .welcome-entry{max-width:none;min-height:100dvh;padding:30px 40px 22px;position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(ellipse at 0% 0%,#CCE4BF 0%,#CCE4BF00 50%),radial-gradient(ellipse at 100% 100%,#C3DCC5 0%,#C3DCC500 55%),radial-gradient(ellipse at 100% 0%,#F2E6C8 0%,#F2E6C800 50%),#F5F7F2}
-.welcome-entry::before,.welcome-entry::after{content:'';position:absolute;pointer-events:none}
-.welcome-entry::before{z-index:0;width:min(900px,74vw);aspect-ratio:480/350;right:max(-10px,calc((100vw - 1440px)/2));top:50%;transform:translateY(-45%);background:url('welcome-court.svg') center/contain no-repeat;opacity:.94}
-.welcome-entry::after{z-index:1;inset:0;background:linear-gradient(90deg,#F5F7F28C 0%,#F5F7F25C 32%,#F5F7F200 62%)}
-.welcome-entry>header,.welcome-entry>.entry-welcome,.welcome-entry>.entry-footer{position:relative;z-index:2}
+.welcome-court-backdrop,.welcome-entry::after{position:absolute;pointer-events:none}
+.welcome-court-backdrop{z-index:0;width:min(900px,74vw);aspect-ratio:480/350;right:max(-10px,calc((100vw - 1440px)/2));top:50%;transform:translateY(-45%);opacity:.94}
+.welcome-entry::after{content:'';z-index:1;inset:0;background:linear-gradient(90deg,#F5F7F28C 0%,#F5F7F25C 32%,#F5F7F200 62%)}
+.welcome-entry>header,.welcome-entry>.entry-welcome,.welcome-entry>.entry-footer{position:relative;z-index:3}
 .welcome-entry>header{width:100%;max-width:1120px;min-height:48px;margin:0 auto 22px;gap:18px;flex-shrink:0}
 .welcome-entry .entry-welcome{width:100%;max-width:1120px;align-self:center;margin:auto 0;padding:8px 0;text-align:left}
 .welcome-copy{padding:0}
@@ -28,10 +28,10 @@
 .welcome-entry .entry-demo:hover{color:#294C30;text-decoration:underline;text-underline-offset:4px}
 .welcome-entry>.entry-footer{width:100%;max-width:1120px;justify-content:flex-start;align-self:center;margin:16px 0 0;padding-top:8px;font-size:10px;color:#65775E;flex-shrink:0}
 @media(min-width:761px) and (max-height:680px){.welcome-entry{padding-top:20px;padding-bottom:16px}.welcome-entry>header{margin-bottom:14px}.welcome-entry .entry-welcome h1{font-size:49px;margin-bottom:24px}.welcome-entry .entry-choice{min-height:72px;padding:13px 18px}.welcome-entry .entry-demo{margin-top:15px}}
-@media(max-width:1000px) and (min-width:761px){.welcome-entry{padding-left:30px;padding-right:30px}.welcome-entry .entry-choices{width:365px}.welcome-entry .entry-welcome h1{font-size:53px}.welcome-entry::before{width:850px;right:-200px;opacity:.85}.welcome-entry::after{background:linear-gradient(90deg,#F5F7F299 0%,#F5F7F25C 30%,#F5F7F200 77%)}}
+@media(max-width:1000px) and (min-width:761px){.welcome-entry{padding-left:30px;padding-right:30px}.welcome-entry .entry-choices{width:365px}.welcome-entry .entry-welcome h1{font-size:53px}.welcome-court-backdrop{width:850px;right:-200px;opacity:.85}.welcome-entry::after{background:linear-gradient(90deg,#F5F7F299 0%,#F5F7F25C 30%,#F5F7F200 77%)}}
 @media(max-width:760px){
  .welcome-entry{padding:23px 22px 18px;min-height:100dvh}
- .welcome-entry::before{width:640px;right:calc(50% - 320px);top:120px;transform:none;opacity:.82}
+ .welcome-court-backdrop{width:640px;right:calc(50% - 320px);top:120px;transform:none;opacity:.82}
  .welcome-entry::after{background:linear-gradient(180deg,#F5F7F28C 0%,#F5F7F273 13%,#F5F7F200 32%,#F5F7F200 48%,#F5F7F299 78%)}
  .welcome-entry>header{min-height:42px;margin-bottom:28px;flex-wrap:nowrap}
  .welcome-entry .entry-welcome{padding:16px 0 0;margin:0;width:100%;max-width:450px;text-align:left}
@@ -46,3 +46,26 @@
 @media(min-width:761px) and (min-height:900px){.welcome-entry .entry-welcome{margin:65px 0 auto}}
 @media(max-width:370px){.welcome-entry{padding:20px 17px 16px}.welcome-entry .entry-welcome h1{font-size:41px}.welcome-entry .entry-choice{grid-template-columns:38px minmax(0,1fr) 20px;gap:11px;padding:14px;min-height:72px}.welcome-entry .entry-choice-icon{width:38px;height:38px}.welcome-entry .entry-choice-title{font-size:12px}.welcome-entry .entry-choices{margin-top:110px}}
 @media(prefers-reduced-motion:reduce){.welcome-entry .entry-choice{transition:none}.welcome-entry .entry-choice:hover{transform:none}}
+
+/* Motion lives underneath all interactive content. */
+.welcome-court-backdrop>svg{display:block;width:100%;height:100%;overflow:visible}
+.welcome-leaves{position:absolute;inset:0;z-index:2;overflow:hidden;pointer-events:none;contain:paint}
+.welcome-falling-leaf{position:absolute;top:-55px;left:var(--leaf-x);width:var(--leaf-size);height:calc(var(--leaf-size)*1.5);opacity:0;animation:welcome-leaf-fall var(--leaf-duration) linear var(--leaf-delay) infinite}
+.welcome-falling-leaf svg{display:block;width:100%;height:100%;filter:drop-shadow(1px 3px 2px #365C3B19)}
+.welcome-header-actions{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.welcome-entry .welcome-motion-toggle{width:40px;height:40px;border-radius:13px;background:#EFF4E7;border:1px solid #FFF;box-shadow:3px 4px 8px #365C3B12,-2px -2px 7px #FFFFFFB3;color:#557749}
+.welcome-entry .welcome-motion-toggle .icon{width:17px;height:17px}
+.welcome-entry .welcome-motion-toggle:focus-visible{outline:3px solid #557C42;outline-offset:3px}
+.welcome-entry.motion-paused .welcome-motion-toggle{box-shadow:inset 2px 2px 5px #D2DDC7,inset -2px -2px 5px #FFF}
+.welcome-rally{transform:translate(78px,68px);animation:welcome-rally 9.6s linear infinite}
+.welcome-rally-ball{transform-origin:0 0;animation:welcome-ball-hop 1.2s ease-in-out infinite}
+.welcome-rally-shadow{transform-origin:0px 4px;animation:welcome-ball-shadow 1.2s ease-in-out infinite}
+.welcome-rally-holes{transform-origin:0 0;animation:welcome-ball-spin 3.2s linear infinite}
+.motion-paused :is(.welcome-rally,.welcome-rally-ball,.welcome-rally-shadow,.welcome-rally-holes,.welcome-falling-leaf){animation-play-state:paused}
+@keyframes welcome-rally{0%,100%{transform:translate(78px,68px)}12.5%{transform:translate(320px,143px)}25%{transform:translate(88px,154px)}37.5%{transform:translate(312px,68px)}50%{transform:translate(91px,96px)}62.5%{transform:translate(322px,156px)}75%{transform:translate(81px,150px)}87.5%{transform:translate(310px,86px)}}
+@keyframes welcome-ball-hop{0%,100%{transform:translateY(0) scale(.95)}50%{transform:translateY(-9px) scale(1.14)}}
+@keyframes welcome-ball-shadow{0%,100%{transform:scale(1);opacity:.23}50%{transform:scale(.7);opacity:.13}}
+@keyframes welcome-ball-spin{to{transform:rotate(360deg)}}
+@keyframes welcome-leaf-fall{0%{transform:translate3d(0,-20px,0) rotate(-25deg);opacity:0}10%{opacity:.6}25%{transform:translate3d(calc(var(--leaf-drift)*.35),25dvh,0) rotate(25deg)}50%{transform:translate3d(calc(var(--leaf-drift)*-.3),50dvh,0) rotate(-30deg)}75%{transform:translate3d(calc(var(--leaf-drift)*.6),75dvh,0) rotate(40deg)}90%{opacity:.6}100%{transform:translate3d(var(--leaf-drift),calc(100dvh + 80px),0) rotate(105deg);opacity:0}}
+@media(max-width:760px){.welcome-entry>header{flex-wrap:wrap}.welcome-header-actions{gap:8px}.welcome-entry .entry-brand{font-size:14px;gap:8px}.welcome-entry .welcome-motion-toggle{width:38px;height:40px}}
+@media(prefers-reduced-motion:reduce){.welcome-rally,.welcome-rally-ball,.welcome-rally-shadow,.welcome-rally-holes{animation:none}.welcome-leaves,.welcome-entry .welcome-motion-toggle{display:none}}

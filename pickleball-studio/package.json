@@ -7,7 +7,7 @@
     "dev": "node server.mjs --dev --open",
     "start": "node server.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check dist/app.js && node --check dist/selects.js && node --check dist/engine.js && node --check dist/flow.js && node --check dist/sessions.js && node --check dist/entry.js && node --check server.mjs && node --check dist/cloud.js && node --check portal/backend.js && node --check portal/player.js && node --check dist/courts.js && node --check dist/court-display-model.js && node --check dist/court-display-host.js && node --check dist/court-announcer.js && node --check dist/reclub-import.js && node --check dist/roster-import-ui.js && node --check reclub-service.mjs && node --check ../api/reclub.mjs",
+    "check": "node --check dist/app.js && node --check dist/selects.js && node --check dist/engine.js && node --check dist/flow.js && node --check dist/sessions.js && node --check dist/entry.js && node --check server.mjs && node --check dist/cloud.js && node --check portal/backend.js && node --check portal/player.js && node --check dist/courts.js && node --check dist/court-display-model.js && node --check dist/court-display-host.js && node --check dist/court-announcer.js && node --check dist/reclub-import.js && node --check dist/roster-import-ui.js && node --check reclub-service.mjs && node --check ../api/reclub.mjs && node --check dist/welcome-scene.js",
     "build": "node scripts/build-worker.mjs"
   },
   "dependencies": {
