@@ -1,8 +1,9 @@
 /* Clear space for session choices, with the court composed into the page background. */
 .welcome-entry{max-width:none;min-height:100dvh;padding:30px 40px 22px;position:relative;isolation:isolate;overflow:hidden;background:#F5F7F2}
 .welcome-entry::before,.welcome-entry::after{content:'';position:absolute;pointer-events:none}
-.welcome-entry::before{z-index:-2;width:min(900px,74vw);aspect-ratio:480/350;right:max(-10px,calc((100vw - 1440px)/2));top:50%;transform:translateY(-45%);background:url('welcome-court.svg') center/contain no-repeat;opacity:.94}
-.welcome-entry::after{z-index:-1;inset:0;background:linear-gradient(90deg,#F5F7F2 0%,#F5F7F2 32%,#F5F7F200 62%)}
+.welcome-entry::before{z-index:0;width:min(900px,74vw);aspect-ratio:480/350;right:max(-10px,calc((100vw - 1440px)/2));top:50%;transform:translateY(-45%);background:url('welcome-court.svg') center/contain no-repeat;opacity:.94}
+.welcome-entry::after{z-index:1;inset:0;background:linear-gradient(90deg,#F5F7F2 0%,#F5F7F2 32%,#F5F7F200 62%)}
+.welcome-entry>header,.welcome-entry>.entry-welcome,.welcome-entry>.entry-footer{position:relative;z-index:2}
 .welcome-entry>header{width:100%;max-width:1120px;min-height:48px;margin:0 auto 22px;gap:18px;flex-shrink:0}
 .welcome-entry .entry-welcome{width:100%;max-width:1120px;align-self:center;margin:auto 0;padding:8px 0;text-align:left}
 .welcome-copy{padding:0}
