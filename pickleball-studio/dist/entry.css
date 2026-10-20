@@ -23,11 +23,11 @@
 @media(max-width:760px){.player-page-actions{width:auto}.player-search-controls{grid-template-columns:minmax(0,1fr) 130px;gap:10px}.player-roster-tools{gap:8px}.player-roster-tools .btn{font-size:11px}}
 
 /* Quiet color gives secondary actions depth without competing with primary actions. */
-.btn:not(:where(.primary,.forest,.danger,.selected,.lock-accent,.cancel-lock-button,.reclub-accent)){background:#EFF4E8;color:#365C3B;border-color:#DFE8D6;border-top-color:#FFF;border-left-color:#FFF}
-.btn:not(:where(.primary,.forest,.danger,.selected,.lock-accent,.cancel-lock-button,.reclub-accent)):hover:not(:disabled){background:#E8F0E1}
+.btn:not(:where(.primary,.forest,.danger,.selected,.lock-accent,.cancel-lock-button,.reclub-accent)){background:#E6EEDC;color:#365C3B;border-color:#CBDCBE;border-top-color:#FFF;border-left-color:#FFF}
+.btn:not(:where(.primary,.forest,.danger,.selected,.lock-accent,.cancel-lock-button,.reclub-accent)):hover:not(:disabled){background:#DCE9CD}
 .player-roster-tools [data-action="add-players"]{background:#EDF4ED}
 .player-roster-tools [data-action="all-present"]{background:#EFF2E5}
-.btn.reclub-accent{background:#F3ECDF;color:#4E5D38;border-color:#E6DCC6;border-top-color:#FFF9EC;border-left-color:#FFF9EC;box-shadow:inset 0 1px 2px #FFFCF4,3px 4px 8px #DEDCCD,-3px -3px 7px #FFF}
+.btn.reclub-accent{background:#EFE1C9;color:#4E5D38;border-color:#DDCBA9;border-top-color:#FFF9EC;border-left-color:#FFF9EC;box-shadow:inset 0 1px 2px #FFFCF4,3px 4px 8px #DEDCCD,-3px -3px 7px #FFF}
 .btn.reclub-accent:hover:not(:disabled){background:#EEE4D2;box-shadow:inset 0 1px 2px #FFFCF4,4px 5px 10px #DCD7C6,-3px -3px 7px #FFF}
 .btn.reclub-accent:active:not(:disabled){box-shadow:inset 2px 2px 5px #DBD3BF,inset -2px -2px 5px #FFFCF4;transform:translateY(1px)}
 
@@ -51,3 +51,20 @@
 .session-actions .live-player-action,.session-actions .live-court-action{min-height:44px}
 
 .entry-saved-row>div:first-child{min-width:0}.entry-saved-row h3{overflow-wrap:anywhere}.entry-saved-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0}.saved-actions{flex-wrap:wrap}.entry-saved-actions .btn{min-height:44px}@media(max-width:760px){.entry-saved-actions{justify-content:flex-start}.entry-saved-actions .btn{flex:1}}
+
+/* Soft action colors keep the white surfaces calm and the controls easy to find. */
+.btn.quiet:not(:where(.primary,.forest,.danger,.selected)){background:#E2EEE6;border-color:#CDDDD0;border-top-color:#FFFFFF;box-shadow:inset 0 1px 1px #FFFFFFB3,2px 3px 6px #365C3B12}
+.btn.quiet:hover:not(:disabled){background:#D8E8DD}
+.btn.danger,.btn[data-action="confirm-end"]{background:#F3DCD4;border-color:#E4BFB3;color:#844B3E}
+.btn.danger:hover:not(:disabled),.btn[data-action="confirm-end"]:hover:not(:disabled){background:#EDCEC3}
+.btn[data-action="announce-court"],.btn.caution{background:#F2E8C8;border-color:#E3D5A5;color:#66572E;box-shadow:inset 0 1px 1px #FFF8E7,2px 3px 6px #6B663014}
+.btn[data-action="announce-court"]:hover:not(:disabled),.btn.caution:hover:not(:disabled){background:#EADCAE}
+.btn[data-action="add-players"]{background:#DDEDE3;border-color:#C6DDCD}
+.btn[data-action="all-present"]{background:#E3EDCF;border-color:#CEDDB3}
+.player-roster-tools .lock-accent{background:#CCE5BB;border-color:#B2D39C}
+.player-roster-tools .lock-accent:hover{background:#BEDDA9}
+.btn.workspace-back,.btn.dialog-back,.btn.entry-back{background:#E1EBD5;border-color:#C8D9B8;min-height:42px}
+.icon-btn{background:#E9F0E1;border-color:#D6E1CA}
+.rail-group .rail-btn:not(.active){background:#EDF3E7}
+.btn.quiet:active:not(:disabled),.btn[data-action="announce-court"]:active:not(:disabled),.btn.caution:active:not(:disabled){box-shadow:var(--press)}
+@media(max-width:760px){.btn.workspace-back,.btn.dialog-back,.btn.entry-back{min-height:44px}}
