@@ -12,8 +12,9 @@ export function createConfiguredSession(state,setup,start=false,now=Date.now()) 
  if(![7,11,15,21].includes(setup.target))throw new Error('Choose a supported score target.');
  if(!['fair','balanced','social'].includes(setup.mode)||![0,2,5,10].includes(setup.rest)||![.5,1,1.5,2].includes(setup.maxGap))throw new Error('Choose valid matchmaking preferences.');
  if(start&&setup.players.length<4)throw new Error('Add at least four players to start. You can save a draft with fewer players.');
+ if(start&&setup.players.filter(p=>p.status!=='out').length<4)throw new Error('Check in at least four players before starting. You can save a draft and check players in when they arrive.');
  const players=setup.players.map(p=>({...p,lock:setup.useLocks?p.lock:null}));
- createSession(state,{name:setup.name,courtNames:Array.from({length:setup.courts},(_,i)=>'Court '+(i+1)),
+ createSession(state,{name:setup.name,preserveRegistration:true,courtNames:Array.from({length:setup.courts},(_,i)=>'Court '+(i+1)),
   players,settings:{mode:setup.mode,target:setup.target,rest:setup.rest,strictSkill:setup.strictSkill,
     maxGap:setup.maxGap,avoidRepeats:setup.avoidRepeats}},now);
  state.session.venue=setup.venue.trim();

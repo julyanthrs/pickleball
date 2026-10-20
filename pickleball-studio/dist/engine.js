@@ -1,4 +1,4 @@
-export const STATES = { waiting: 'Waiting', pending: 'Up next', playing: 'Playing', break: 'On break', out: 'Checked out', finished: 'Session complete' };
+export const STATES = { waiting: 'Waiting', pending: 'Up next', playing: 'Playing', break: 'On break', out: 'Not Checked In', finished: 'Session complete' };
 export function stats(state, id) {
   const matches = state.history.filter(m => m.teams.flat().includes(id));
   const scored = matches.filter(m => m.winner !== null);

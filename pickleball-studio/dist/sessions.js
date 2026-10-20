@@ -52,7 +52,7 @@ export function archiveCurrentSession(state, now=Date.now()) {
   if (state.session) state.archive.unshift(snapshotSession(state,now));
 }
 
-export function createSession(state, {name,courtNames,players=[],settings=state.settings}, now=Date.now()) {
+export function createSession(state, {name,courtNames,players=[],settings=state.settings,preserveRegistration=false}, now=Date.now()) {
   if (!name.trim()||name.trim().length>60) throw new Error('Enter a session name of up to 60 characters.');
   if (!courtNames.length||courtNames.length>12) throw new Error('Choose between 1 and 12 courts.');
   if(players.length>120) throw new Error('Sessions support up to 120 players.');
@@ -60,8 +60,9 @@ export function createSession(state, {name,courtNames,players=[],settings=state.
   const idMap=new Map(players.map(p=>[p.id,crypto.randomUUID()]));
   state.session={id:crypto.randomUUID(),name:name.trim(),venue:state.session?.venue||'',createdAt:now,
     startedAt:now,status:'preparing',pausedTime:0};
-  state.players=players.map(p=>({id:idMap.get(p.id),name:p.name,rating:p.rating,status:'waiting',
-    waitSince:now,totalWait:0,priority:0,lock:p.lock&&idMap.get(p.lock)||null}));
+  state.players=players.map(p=>({id:idMap.get(p.id),name:p.name,rating:p.rating,status:preserveRegistration&&p.status==='out'?'out':'waiting',
+    waitSince:now,totalWait:0,priority:0,lock:p.lock&&idMap.get(p.lock)||null,
+    ...(p.rosterSources?{rosterSources:structuredClone(p.rosterSources)}:{})}));
   state.courts=courtNames.map(name=>({id:crypto.randomUUID(),name,status:'available',teams:null}));
   state.settings=structuredClone(settings);state.history=[];state.demo=false;
   assertState(state);

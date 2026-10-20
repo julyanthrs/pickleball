@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { initializeLocalPortal, localPortal } from './portal/local.mjs';
+import {reclubResponse} from './reclub-service.mjs';
 await import('./scripts/build-client.mjs');
 await initializeLocalPortal();
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
@@ -21,6 +22,11 @@ const mime = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': '
 const server = http.createServer(async (req, res) => {
   try {
     const pathname = new URL(req.url, 'http://localhost').pathname;
+    if(pathname==='/api/reclub'){
+      const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>4096){res.writeHead(413).end();return;}chunks.push(chunk);}
+      const response=await reclubResponse(new Request('http://localhost/api/reclub',{method:req.method,body:['GET','HEAD'].includes(req.method)?undefined:Buffer.concat(chunks)}));
+      res.writeHead(response.status,Object.fromEntries(response.headers));res.end(await response.text());return;
+    }
     if(pathname.startsWith('/api/portal/')||pathname.startsWith('/public-api/')){
       if(!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host||'')){res.writeHead(403).end();return;}
       const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>2100000){res.writeHead(413).end();return;}chunks.push(chunk);}
