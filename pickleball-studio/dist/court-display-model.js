@@ -1,5 +1,6 @@
 import { sessionIdentity } from './entry.js';
 import { elapsedSession } from './sessions.js';
+import { queue } from './engine.js';
 
 export const COURT_CHANNEL='pickleball-court-display-v1';
 export const WORKSPACE_KEY='pickleball-studio-v1';
@@ -12,7 +13,10 @@ export function courtDisplayView(workspace,sessionId,now=Date.now()){
   const names=new Map(source.players.map(p=>[p.id,p.name]));
   const teamNames=teams=>teams?.map(t=>t.map(id=>names.get(id)||'Former player'))||null;
   const at=current?now:source.savedAt||now;
+  const open=current&&source.session.status!=='ended',joinUrl=source.session.portal?.joinUrl;
   return {id:sessionId,name:source.session.name,venue:source.session.venue||'',
+    waiting:open?queue(source,now).map(p=>p.name):[],
+    joinUrl:open&&/^https?:\/\//.test(joinUrl||'')?joinUrl:null,
     status:source.session.status,archived:!current,capturedAt:now,
     elapsedMs:current?elapsedSession(source,now):source.durationMs??elapsedSession(source,at),
     pausedAt:source.session.pausedAt||null,frozenAt:!current?at:source.session.endedAt||null,

@@ -295,8 +295,8 @@ function updateCloudConnection(status,info) {
 function receiveSharedSession(info,{mergeOnly=false}={}) {
  if(!sessionSelected||state.session?.portal?.roomId!==info.roomId)return;
  const same=JSON.stringify(sessionPayload(state))===JSON.stringify(sessionPayload(info.state));
- const previousVersion=state.session.portal.version;
- const portal={...state.session.portal,version:info.version};
+ const previousVersion=state.session.portal.version,previousJoin=state.session.portal.joinUrl;
+ const portal={...state.session.portal,version:info.version,...(info.joinUrl&&{joinUrl:info.joinUrl})};
  let changed=!same;
  if(mergeOnly)changed=info.state.players.some(p=>!state.players.some(q=>q.id===p.id));
  if(changed){
@@ -305,7 +305,7 @@ function receiveSharedSession(info,{mergeOnly=false}={}) {
    lastUndo=null;
  }
  state.session.portal=portal;
- if(changed||previousVersion!==info.version){state.revision++;try{localStorage.setItem(KEY,JSON.stringify(state));}catch{persistence=false;}}
+ if(changed||previousVersion!==info.version||previousJoin!==portal.joinUrl){state.revision++;try{localStorage.setItem(KEY,JSON.stringify(state));}catch{persistence=false;}}
  if(changed&&!manageOpen){const focused=document.activeElement?.id,selection=document.activeElement?.selectionStart;render();if(focused){const input=document.getElementById(focused);if(input){input.focus({preventScroll:true});if(typeof selection==='number'&&input.setSelectionRange)input.setSelectionRange(selection,selection);}}}
  updateInviteLive(info);updateCloudConnection('connected');
 }
@@ -321,14 +321,18 @@ function updateInviteLive(info) {
  const requests=modal.querySelector('#invite-requests');if(requests.dataset.requests!==requestKey){requests.innerHTML=pendingJoinContent(info);requests.dataset.requests=requestKey;}
  for(const[id,value]of [['invite-approval',info.requireApproval],['invite-open',info.joinsOpen]]){const input=modal.querySelector('#'+id);if(input&&document.activeElement!==input)input.checked=value;}
 }
+async function enablePortal() {
+ const info=await cloud.enable();if(!info)throw new Error('Live sharing could not connect. Try again.');
+ if(state.session.portal?.roomId!==info.roomId){
+   for(const key of ['session','players','courts','settings','history'])state[key]=structuredClone(info.state[key]);
+   if(!commit('Enabled player portal',()=>{state.session.portal={roomId:info.roomId,invite:info.invite,version:info.version,hostToken:info.hostToken,joinUrl:info.joinUrl};}))return null;
+ }
+ return info;
+}
 async function invitePlayers() {
  openDialog('Invite players','<p class="dialog-intro">Preparing your secure session link…</p>');
  try{
-   const info=await cloud.enable();if(!info)throw new Error('Live sharing could not connect. Try again.');
-   if(state.session.portal?.roomId!==info.roomId){
-     for(const key of ['session','players','courts','settings','history'])state[key]=structuredClone(info.state[key]);
-     if(!commit('Enabled player portal',()=>{state.session.portal={roomId:info.roomId,invite:info.invite,version:info.version,hostToken:info.hostToken};}))return;
-   }
+   const info=await enablePortal();if(!info)return;
    openDialog('Invite players','<div class="invite-qr"><img id="invite-qr-img" alt="Scan to join '+esc(state.session.name)+'" /></div><div class="invite-summary"><span><strong id="invite-joined">'+info.joined+'</strong> joined</span><span><strong id="invite-pending">'+info.pending.length+'</strong> awaiting approval</span></div><div class="field"><label for="invite-link">Session join link</label><input class="invite-link" id="invite-link" readonly value="'+esc(info.joinUrl)+'" /></div><div class="invite-tools">'+btn('copy-invite','Copy Link','copy')+btn('download-qr','Download QR Code','download')+btn('share-invite','Share','upload')+'<a class="btn present-action" href="present.html#join='+encodeURIComponent(info.joinUrl)+'" target="_blank" rel="noopener noreferrer" aria-label="Present session QR (opens a new tab)"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>Present</a></div>'+(cloud.recovery()?'<div class="invite-tools">'+btn('download-shared-recovery','Download local recovery','download','quiet')+'</div>':'')+(['localhost','127.0.0.1'].includes(new URL(info.joinUrl).hostname)?'<p class="invite-security-note">Local preview: this link works on this computer only. For phone joining, use Invite Players in the published Pickleball Studio app.</p>':'')+'<div class="invite-preferences"> <div class="setting-row"><div><h3>Allow joining</h3><p>Close the link when you have enough players.</p></div><label class="switch"><input type="checkbox" id="invite-open" aria-label="Allow joining" '+(info.joinsOpen?'checked':'')+' /><span></span></label></div><div class="setting-row"><div><h3>Approve new players</h3><p>Review requests before players enter the queue.</p></div><label class="switch"><input type="checkbox" id="invite-approval" aria-label="Approve new players" '+(info.requireApproval?'checked':'')+' /><span></span></label></div></div><div id="invite-error" class="invite-error" role="alert"></div><section class="invite-requests" id="invite-requests">'+pendingJoinContent(info)+'</section><p class="invite-security-note">Players see their own session dashboard. Only the organizer can change matches, scores, courts, and settings. No account or app installation is required.</p><div class="dialog-actions">'+btn('close','Done','check','quiet')+'</div>');
    inviteSvg=await qrSvg(info.joinUrl,{type:'svg',errorCorrectionLevel:'M',margin:4,color:{dark:'#365C3B',light:'#FFFFFF'}});
    const image=modal.querySelector('#invite-qr-img');if(image)image.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(inviteSvg);
@@ -565,6 +569,8 @@ function validateBackup(b) {
   assertState(b);
 }
 app.addEventListener('click',handleAction);
+// Present Courts shows the join QR, so make sure player invites are on.
+app.addEventListener('click',e=>{if(e.target.closest('.present-courts-action')&&state.session&&!state.session.portal?.roomId&&state.session.status!=='ended')enablePortal().catch(err=>notify(err.message));});
 document.querySelector('#toast').addEventListener('click',handleAction);
 modal.addEventListener('click',e=>{if(e.target.closest('[data-action="confirm-restore"]')){const backup=dialogContext.backup;if(commit('Restored workspace backup',()=>{const revision=state.revision;state={...structuredClone(backup),revision};})){openWorkspace();notify('Backup restored.');}}else handleAction(e);});
 document.addEventListener('submit',handleSubmit);

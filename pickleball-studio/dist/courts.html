@@ -37,6 +37,10 @@
     </header>
     <p class="display-notice" id="display-notice" role="status">Connecting to your organizer…</p>
     <section class="display-courts" id="display-courts" aria-label="Session courts"></section>
+    <aside class="display-side" id="display-side" hidden>
+      <section class="side-card side-queue" aria-labelledby="side-queue-title"><h2 id="side-queue-title">Up next</h2><div id="side-up-next"></div><h3 id="side-waiting-title"></h3><ol class="side-waiting" id="side-waiting"></ol></section>
+      <section class="side-card side-invite" id="side-invite" aria-labelledby="side-invite-title" hidden><h2 id="side-invite-title">Join this session</h2><img id="side-qr" alt="QR code to join this session" hidden /><p id="side-qr-help"></p></section>
+    </aside>
     <footer class="display-footer"><span id="connection-status" class="visually-hidden" role="status">Waiting for live updates</span><div class="page-controls" id="page-controls" hidden><button id="previous-page" aria-label="Previous courts">←</button><span id="page-label"></span><button id="next-page" aria-label="Next courts">→</button></div><span class="read-only-label visually-hidden">Court display · Read only</span></footer>
   </main>
   <div class="announcement-layer" id="announcement-layer" hidden><section class="announcement" aria-label="Player announcement"><button id="dismiss-announcement" aria-label="Cancel announcement" title="Cancel announcement">×</button><div id="announcement-content"></div><p id="announcement-voice-status" role="status"></p><div class="announcement-progress" aria-hidden="true"></div></section></div>
