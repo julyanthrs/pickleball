@@ -1,5 +1,6 @@
 import { COURT_CHANNEL,WORKSPACE_KEY,courtDisplayView,newCourtAssignments,validCourtAnnouncement } from './court-display-model.js';
 import { createCourtAnnouncer } from './court-announcer.js';
+import { toString as qrSvg } from './qr.js';
 
 const $=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sessionId=new URLSearchParams(location.hash.slice(1)).get('session');
@@ -44,10 +45,23 @@ function renderBoard(){
   const grid=$('display-courts');grid.style.setProperty('--columns',columns);grid.style.setProperty('--rows',Math.ceil(courts.length/columns));grid.classList.toggle('dense',courts.length>4);
   grid.innerHTML=courts.length?courts.map(renderCourt).join(''):'<div class="display-empty"><h2>No courts configured</h2><p>Courts added by the organizer will appear here.</p></div>';
   $('page-controls').hidden=pages===1;$('page-label').textContent='Courts '+(page*6+1)+'–'+Math.min(page*6+6,view.courts.length)+' of '+view.courts.length;
-  tick();
+  renderSide();tick();
+}
+let qrUrl=null;
+function renderSide(){
+  const ended=view.status==='ended',next=ended?[]:view.courts.filter(c=>c.status==='pending'&&c.teams),waiting=view.waiting||[],shown=waiting.slice(0,10);
+  $('display-side').hidden=ended&&!view.joinUrl;
+  $('side-up-next').innerHTML=next.length?next.map(c=>'<div class="side-match"><strong>'+esc(c.name)+'</strong>'+c.teams.map(t=>'<span>'+t.map(esc).join(' &amp; ')+'</span>').join('<em>vs</em>')+'</div>').join(''):'<p class="side-empty">'+(ended?'Session complete':'No matches called yet')+'</p>';
+  $('side-waiting-title').textContent=waiting.length?'Waiting · '+waiting.length:'';
+  $('side-waiting').innerHTML=shown.map(name=>'<li>'+esc(name)+'</li>').join('')+(waiting.length>shown.length?'<li class="side-more">+'+(waiting.length-shown.length)+' more</li>':'');
+  $('side-invite').hidden=ended||view.archived;
+  $('side-qr').hidden=!view.joinUrl;
+  $('side-qr-help').textContent=view.joinUrl?'Scan with your phone camera to check in and follow your matches.':'The join QR code appears here once the organizer opens Invite players.';
+  if(!view.joinUrl)qrUrl=null;
+  else if(view.joinUrl!==qrUrl){const url=qrUrl=view.joinUrl;qrSvg(url,{type:'svg',errorCorrectionLevel:'M',margin:2,color:{dark:'#365C3B',light:'#FFFFFF'}}).then(svg=>{if(qrUrl===url)$('side-qr').src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);}).catch(()=>{$('side-qr').hidden=true;});}
 }
 function showEmpty(message){
-  view=null;signature='';announcements=[];hideAnnouncement();$('session-name').textContent='Court presentation';$('session-status').textContent='Not connected';$('session-clock').textContent='00:00:00';$('venue').textContent='';$('page-controls').hidden=true;
+  view=null;signature='';announcements=[];hideAnnouncement();$('session-name').textContent='Court presentation';$('session-status').textContent='Not connected';$('session-clock').textContent='00:00:00';$('venue').textContent='';$('page-controls').hidden=true;$('display-side').hidden=true;
   $('display-courts').innerHTML='<div class="display-empty"><h2>Your courts will appear here.</h2><p>'+esc(message)+'</p></div>';
   $('display-notice').textContent='';$('connection-status').textContent='Waiting for an organizer';
 }

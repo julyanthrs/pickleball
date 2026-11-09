@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { demoState,reserve,startMatch } from '../dist/engine.js';
+import { demoState,reserve,startMatch,queue } from '../dist/engine.js';
 import { snapshotSession,finishSession } from '../dist/sessions.js';
 import { sessionIdentity } from '../dist/entry.js';
 import { courtDisplayView,newCourtAssignments,validCourtAnnouncement } from '../dist/court-display-model.js';
@@ -16,6 +16,18 @@ test('TV projection contains court names and lineups without organizer credentia
  assert.equal(JSON.stringify(view).includes('private-player-note'),false);
  assert.equal('players' in view,false);assert.equal('settings' in view,false);
  assert.deepEqual(state,before);
+});
+
+test('TV side rail gets the waiting queue and a safe join link only while play is open',()=>{
+ const state=demoState(),id=sessionIdentity(state.session);
+ state.session.portal={roomId:'room',hostToken:'private-organizer-token',joinUrl:'https://players.example/join/abc'};
+ const view=courtDisplayView(state,id);
+ assert.deepEqual(view.waiting,queue(state).map(p=>p.name));assert.ok(view.waiting.length>0);
+ assert.equal(view.joinUrl,'https://players.example/join/abc');
+ assert.equal(JSON.stringify(view).includes('private-organizer-token'),false);
+ state.session.portal.joinUrl='javascript:alert(1)';assert.equal(courtDisplayView(state,id).joinUrl,null);
+ state.session.portal.joinUrl='https://players.example/join/abc';finishSession(state);
+ const ended=courtDisplayView(state,id);assert.equal(ended.joinUrl,null);assert.deepEqual(ended.waiting,[]);
 });
 
 test('TV remains pinned to its original session after another session is selected',()=>{
